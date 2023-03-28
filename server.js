@@ -10,6 +10,9 @@ const auth = require("./auth.js");
 
 const app = express();
 
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
+
 app.use(
     session({
         secret: process.env["SESSION_SECRET"],
@@ -34,6 +37,21 @@ myDB(async (client) => {
 
     routes(app, myDataBase);
     auth(app, myDataBase);
+
+    let currentUsers = 0;
+    io.on("connection", (socket) => {
+        console.log("A user has connected");
+        currentUsers++;
+        io.emit("user count", currentUsers);
+
+        socket.on("disconnect", () => {
+            /*anything you want to do on disconnect*/
+            console.log("A user has disconnected");
+            --currentUsers;
+            io.emit("user count", currentUsers);
+        });
+    });
+
     // Be sure to add this...
 }).catch((e) => {
     app.route("/").get((req, res) => {
@@ -46,6 +64,6 @@ myDB(async (client) => {
 // app.listen out here...
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+http.listen(PORT, () => {
     console.log("Listening on port " + PORT);
 });
